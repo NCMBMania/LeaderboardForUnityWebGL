@@ -3,7 +3,6 @@ using UnityEngine.UI;
 
 public class Demo : MonoBehaviour
 {
-    public LeaderboardManager leaderboardManager;
     public int score;
 
     public InputField playerNameInputField;
@@ -29,7 +28,7 @@ public class Demo : MonoBehaviour
         string playerName = string.IsNullOrEmpty(playerNameInputField.text) ? "No Name" : playerNameInputField.text;
 
         //一人でテストするとき用に１つのPCからスコアを複数回追加できる重複ＯＫオプションをtrueにしてます。本番用はfalse推奨。//
-        StartCoroutine(leaderboardManager.SendScore(playerName, score, true));
+        StartCoroutine(LeaderboardManager.Instance.SendScore(playerName, score, true));
     }
 
     public void OnButtonShowLeaderBoard()
@@ -37,9 +36,10 @@ public class Demo : MonoBehaviour
         leaderBoardText.text = "Loading...";
         leaderboard.enabled = true;
 
-        StartCoroutine(leaderboardManager.GetScoreList((string scoreList) =>
+        //上位10位まで取得//
+        StartCoroutine(LeaderboardManager.Instance.GetScoreListByStr(10, (scoresText) =>
         {
-            leaderBoardText.text = scoreList;
+            leaderBoardText.text = scoresText;
         }));
     }
 

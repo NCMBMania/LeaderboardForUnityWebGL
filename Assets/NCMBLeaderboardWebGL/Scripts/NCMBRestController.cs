@@ -18,9 +18,12 @@ namespace NCMBRest
 
         //NCMB 共通リクエストヘッダ//
         private static readonly string KEY_APPLICATION = "X-NCMB-Application-Key";
+
         private static readonly string KEY_TIMESTAMP = "X-NCMB-Timestamp";
+
         //private static readonly string KEY_SESSION_TOKEN = "X-NCMB-Apps-Session-Token";
         private static readonly string KEY_SIGNATURE = "X-NCMB-Signature";
+
         private static readonly string KEY_CONTENT_TYPE = "Content-Type";
         private static readonly string VAL_SIGNATURE_METHOD = "HmacSHA256";
         private static readonly string VAL_SIGNATURE_VERSION = "2";
@@ -57,6 +60,7 @@ namespace NCMBRest
                     }
                     request = UnityWebRequest.Get(endpoint);
                     break;
+
                 default:
                     request = new UnityWebRequest(endpoint, method.ToString());
                     request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(ncmbObjectRest.FieldsAsJson));
@@ -81,12 +85,12 @@ namespace NCMBRest
             {
                 if (request.responseCode == 200 || request.responseCode == 201)
                 {
-                    Debug.Log("Send success");
+                    Debug.Log("Request succeed");
                 }
                 else
                 {
                     //登録完了 201
-                    Debug.LogWarning("Send Failed" + request.responseCode.ToString());
+                    Debug.LogWarning("Request Failed" + request.responseCode.ToString());
                 }
 
                 yield return request.downloadHandler.text;
@@ -96,17 +100,10 @@ namespace NCMBRest
         //署名の生成//
         private string Signature(string method, string endpoint, string queryString)
         {
-            //HMAC を使用すると、送信者と受信者が共有キーを共有していれば、
-            //セキュリティ設定されていないチャネルを通して送信されたメッセージが不正に変更されていないかどうかを確認できます。
-            //SHA256ハッシュ関数を使用して、ハッシュメッセージ認証コード (HMAC) を計算します。//
-
-            //それをBase64化して返す//
-
             string signatureString = this.SignatureString(method, endpoint, queryString);
             HMACSHA256 sha256 = new HMACSHA256(Encoding.UTF8.GetBytes(this.clientKey));
             byte[] signatureBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(signatureString));
             return Convert.ToBase64String(signatureBytes);
-            // signature;
         }
 
         //署名用文字列の生成//
@@ -132,10 +129,12 @@ namespace NCMBRest
         private string QueryString(NCMBDataStoreParamSet ncmbObjectRest)//, bool isConvertJson)
         {
             StringBuilder builder = new StringBuilder();
+            /*
             if (ncmbObjectRest.Count)
             {
                 builder.Append("&count=1");
             }
+            */
             if (ncmbObjectRest.Limit > 0)
             {
                 builder.Append(string.Format("&limit={0}", ncmbObjectRest.Limit));
@@ -178,6 +177,14 @@ namespace NCMBRest
 
         public string createDate;
         public string updateDate;
+        public string FieldsAsJson { get; private set; }
+        public string SortColumn { get; set; }
+        public int Limit { get; set; }
+
+        public NCMBDataStoreParamSet(object obj = null)
+        {
+            FieldsAsJson = JsonUtility.ToJson(obj);
+        }
 
         public DateTime createDateTime
         {
@@ -186,22 +193,6 @@ namespace NCMBRest
                 return DateTime.Parse(createDate);
                 //"yyyy-MM-dd'T'HH:mm:ss'Z'"に直す//
             }
-        }
-
-        public string FieldsAsJson { get; private set; }
-
-        public string SortColumn { get; set; }
-        public int Limit { get; set; }
-        public bool Count { get; set; }
-
-        public NCMBDataStoreParamSet(object obj = null)
-        {
-            FieldsAsJson = JsonUtility.ToJson(obj);
-        }
-
-        public T GetFields<T>()
-        {
-            return JsonUtility.FromJson<T>(FieldsAsJson);
         }
     }
 }

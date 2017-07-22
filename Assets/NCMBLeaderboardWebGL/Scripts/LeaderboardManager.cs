@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-
 [RequireComponent(typeof(NCMBRestController))]
 public class LeaderboardManager : MonoBehaviour
 {
@@ -13,59 +12,98 @@ public class LeaderboardManager : MonoBehaviour
 
     private static readonly string OBJECT_ID = "ObjectId";
     private static readonly string HIGH_SCORE = "HighScore";
-    private static readonly string DATASTORE_CLASSNAME = "Leaderboard";
+    private static readonly string DATASTORE_CLASSNAME = "Leaderboard"; //スコアを保存するデータストア名//
+
+    public static LeaderboardManager Instance { get; private set; }
 
     private void Awake()
     {
-        DontDestroyOnLoad(this.gameObject);
+        if (Instance == null)
+
+        {
+            Instance = this;
+            DontDestroyOnLoad(this.gameObject);
+        }
+        else
+        {
+            Destroy(this.gameObject);
+        }
 
         ncmbRestController = GetComponent<NCMBRestController>();
     }
 
-    public IEnumerator SendScore(string playerName, int score, bool isAllowDuplicatedScore)
+    public IEnumerator SendScore(string playerName, int score, bool isAllowDuplicatedScore = false)
     {
-        NCMBDataStoreParamSet paramSet = new NCMBDataStoreParamSet(new Score(playerName, score));
-
-        //与えられたスコアが自己ハイスコアかどうか確認してからポスト または重複OKかどうか//
-        if (!PlayerPrefs.HasKey(OBJECT_ID) || isAllowDuplicatedScore)
+        if (isAllowDuplicatedScore == false)
         {
-            Debug.Log("Post Data " + playerName);
-
-            IEnumerator coroutine = ncmbRestController.Call(NCMBRestController.RequestType.POST, "classes/" + DATASTORE_CLASSNAME, paramSet);
-
-            yield return StartCoroutine(coroutine);
-
-            //取得したjsonをNCMBDataStoreParamSetとして展開//
-            paramSet = JsonUtility.FromJson<NCMBDataStoreParamSet>((string)coroutine.Current);
-
-            PlayerPrefs.SetString(OBJECT_ID, paramSet.objectId);
-            PlayerPrefs.SetInt(HIGH_SCORE, score);
-        }
-        else
-        {
-            if (score > PlayerPrefs.GetInt(HIGH_SCORE))
+            //過去のスコアがあるか//
+            if (PlayerPrefs.HasKey(OBJECT_ID))
             {
-                string objectId = PlayerPrefs.GetString(OBJECT_ID);
-                Debug.Log("This PC's ID " + objectId + "Put Data" + playerName);
-
-                IEnumerator coroutine = ncmbRestController.Call(NCMBRestController.RequestType.PUT, "classes/" + DATASTORE_CLASSNAME + "/" + objectId, paramSet);
-
-                yield return StartCoroutine(coroutine);
-
-                PlayerPrefs.SetInt(HIGH_SCORE, score);
-            }
-            else
-            {
-                Debug.Log("Score doesn't updated");
+                //そのスコアはハイスコアか//
+                if (score > PlayerPrefs.GetInt(HIGH_SCORE))
+                {
+                    //レコードの更新//
+                    yield return PutScore(playerName, score, PlayerPrefs.GetString(OBJECT_ID));
+                    //ローカルのハイスコアを更新//
+                    PlayerPrefs.SetInt(HIGH_SCORE, score);
+                    yield break;
+                }
+                else
+                {
+                    Debug.Log("Score doesn't updated");
+                    yield break;
+                }
             }
         }
+
+        //レコードの新規作成//
+        IEnumerator postScoreCoroutine = PostScore(playerName, score);
+
+        yield return postScoreCoroutine;
+
+        string objectId = (string)postScoreCoroutine.Current;
+
+        PlayerPrefs.SetString(OBJECT_ID, objectId);//ObjectIdを保存//
+        PlayerPrefs.SetInt(HIGH_SCORE, score);//ローカルのハイスコアを保存//
     }
-    
-    public IEnumerator GetScoreList(UnityAction<Scores> callback)
+
+    private IEnumerator PostScore(string playerName, int score)
+    {
+        Debug.Log("Post Score " + playerName);
+
+        ScoreData scoreData = new ScoreData(playerName, score);
+        NCMBDataStoreParamSet paramSet = new NCMBDataStoreParamSet(scoreData);
+
+        IEnumerator coroutine = ncmbRestController.Call(NCMBRestController.RequestType.POST, "classes/" + DATASTORE_CLASSNAME, paramSet);
+
+        yield return StartCoroutine(coroutine);
+
+        JsonUtility.FromJsonOverwrite((string)coroutine.Current, paramSet);
+
+        yield return paramSet.objectId;
+    }
+
+    private IEnumerator PutScore(string playerName, int score, string objectId)
+    {
+        Debug.Log("Put Score " + playerName + "This PC's ID " + objectId);
+
+        ScoreData scoreData = new ScoreData(playerName, score);
+        NCMBDataStoreParamSet paramSet = new NCMBDataStoreParamSet(scoreData);
+
+        IEnumerator coroutine = ncmbRestController.Call(NCMBRestController.RequestType.PUT, "classes/" + DATASTORE_CLASSNAME + "/" + objectId, paramSet);
+
+        yield return StartCoroutine(coroutine);
+
+        JsonUtility.FromJsonOverwrite((string)coroutine.Current, paramSet);
+
+        yield return paramSet.objectId;
+    }
+
+    public IEnumerator GetScoreList(int num, UnityAction<ScoreDatas> callback)
     {
         Debug.Log("Get Data");
         NCMBDataStoreParamSet paramSet = new NCMBDataStoreParamSet();
-        paramSet.Limit = 10;
+        paramSet.Limit = num;
         paramSet.SortColumn = "-score";
 
         IEnumerator coroutine = ncmbRestController.Call(NCMBRestController.RequestType.GET, "classes/" + DATASTORE_CLASSNAME, paramSet);
@@ -74,8 +112,8 @@ public class LeaderboardManager : MonoBehaviour
 
         string jsonStr = (string)coroutine.Current;
 
-        //取得したjsonをScoresとして展開//
-        Scores scores = JsonUtility.FromJson<Scores>(jsonStr);
+        //取得したjsonをScoreDatasとして展開//
+        ScoreDatas scores = JsonUtility.FromJson<ScoreDatas>(jsonStr);
 
         if (scores.results.Count == 0)
         {
@@ -85,15 +123,15 @@ public class LeaderboardManager : MonoBehaviour
         callback(scores);
     }
 
-    public IEnumerator GetScoreList(UnityAction<string> callback)
+    public IEnumerator GetScoreListByStr(int num, UnityAction<string> callback)
     {
-        yield return GetScoreList((scores) =>
+        yield return GetScoreList(num, (scores) =>
         {
             string str = string.Empty;
 
             int i = 1;
 
-            foreach (Score s in scores.results)
+            foreach (ScoreData s in scores.results)
             {
                 str += i + ": " + s.playerName + ": " + s.score.ToString() + "\n";
                 i++;
@@ -104,15 +142,15 @@ public class LeaderboardManager : MonoBehaviour
     }
 
     [Serializable]
-    public class Scores
+    public class ScoreDatas
     {
-        public List<Score> results;
+        public List<ScoreData> results;
     }
 
     [Serializable]
-    public class Score
+    public class ScoreData
     {
-        public Score(string playerName, int score)
+        public ScoreData(string playerName, int score)
         {
             this.playerName = playerName;
             this.score = score;
