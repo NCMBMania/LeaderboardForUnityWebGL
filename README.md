@@ -3,6 +3,8 @@
 ## これは何？
 
 Unity WebGLで簡単に使えるランキング（リーダーボード）プラグインです。
+主にUnity WebGLで開発されたゲームの公開サービス、[unityroom](https://unityroom.com/)のために用意しました。
+PC/Mac/iOS/Androidでもそのままご利用いただけます。
 ライセンスはMITです。
 スコアを保存するバックエンドにはニフティクラウド mobile backend(NCMB)を使用します。
 
@@ -16,7 +18,7 @@ https://github.com/anzfactory/Yoshinani
 
 ## デモの試し方
 
-ブラウザで試せるデモは[ここ](https://developer.cloud.unity3d.com/share/Wktq-umxYM/)
+ブラウザで試せるデモは[ここ](https://unityroom.com/games/leaderboarddemo)
 
 Unity Editor上で試したり、自分のゲームに導入する場合はNCMBのアカウント取得が必要です。
 
