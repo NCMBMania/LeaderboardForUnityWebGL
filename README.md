@@ -1,24 +1,24 @@
-# LeaderboardForUnityWebGL
+# Leaderboard For Unity WebGL
 
 ## これは何？
 
-Unityで開発したゲームをWebGL出力したときに使えるランキング（リーダーボード）機能を追加するものです。
-リーダーボードデータを保存するバックエンドにニフティクラウド mobile backend(NCMB)を使用しています。
+Unity WebGLで簡単に使えるランキング（リーダーボード）プラグインです。
+ライセンスはMITです。
+スコアを保存するバックエンドにはニフティクラウド mobile backend(NCMB)を使用します。
 
 http://mb.cloud.nifty.com/
 
-[anzfactory](https://github.com/anzfactory)さんのYoshinaniライブラリを発展させて開発しました。プレイヤーごとのログインが不要になっています。
-
+本ライブラリは[anzfactory](https://github.com/anzfactory)さんの「Yoshinani」ライブラリをベースとしています。
+本人に許可をいただいた上で内容を発展させ、ゲーム中におけるプレイヤーごとのログインが不要になっています。
 https://github.com/anzfactory/Yoshinani
 
-REST通信のための文字列成形などはほとんどいっしょです。
+（REST通信のための文字列生成処理などは、ほとんど同じです。）
 
-## 仕様
-スコアを保存すると、PCごとにIDが割り振られます。
-IDを持っている場合は、同IDのデータの内容を更新します。すなわち、自分のハイスコアを超えない限りはスコアが更新されません。
-PlayePrefsで、ObjectIdとHighScoreとしてローカルに保存されます。
+## デモの試し方
 
-## デモの使い方
+ブラウザで試せるデモは[ここ](https://developer.cloud.unity3d.com/share/Wktq-umxYM/)
+
+Unity Editor上で試したり、自分のゲームに導入する場合はNCMBのアカウント取得が必要です。
 
 1. NCMBのアカウントを作り、「アプリ」を作成してAPIキー(Aplication KeyとClient Key)を入手する。
 2. releseのLeaderboardForWebGL.unitypackageをプロジェクトにインポートする
@@ -26,41 +26,77 @@ PlayePrefsで、ObjectIdとHighScoreとしてローカルに保存されます�
 4. LeaderboardManagerオブジェクトのインスペクタについている「NCMB Rest Controller」にAplication KeyとClient Keyを設定する
 5. 実行、Count Upで数字が増加、Send Scoreでスコアを送信、Show Leaderboardでランキングを取得・表示。
 
-NCMBの管理画面では、「データストア」にLeaderboardという名前のクラスができており、ここにデータが溜まっていきます。
+サンプルのランキング表示画面はCanvasを使ったシンプルなものですが、このままゲームへパクっても問題ありません。
 
-## 組み込み方
+![デモ](Images/Demo.png)
+
+
+## ゲームへの組み込み方
 
 ### プレハブの配置
 まず、Assets\NCMBLeaderboardWebGL\Prefab\LeaderboardManager をシーン上に配置します。
+LeaderboardManagerはシングルトンクラスですので、他のスクリプトからはLeaderboardManager.Instanceでアクセスできます。
 
 ### スコアを送信
 
-通信処理はコルーチンで処理します。LeaderboardManager.csの次の関数を呼びます。
+LeaderboardManager.csの次の関数をコルーチンとして呼びます。
 
 ```csharp
 
-StartCoroutine(leaderboardManager.SendScore(playerName, score, false));
+StartCoroutine(LeaderboardManager.Instance.SendScore(playerName, score, false));
 
 ```
-プレイヤーの名前、スコアを与えます。
-引数のiSisAllowDuplicatedScoreは、スコアが一人（一つのPC）から何回も投稿できるオプションです。
-自分でテストする際はtrueにしておき、本番ではfalseにするとよいです。
+プレイヤーの名前とスコアを与えてコルーチンを実行します。
+
+引数の「isAllowDuplicatedScore」は、プレイヤー1人ごとのスコアの保持を1つにするか、複数にするかのフラグです。
+自分でテストする際はレコードが1個しか登録できないと作りづらいのでtrueにしておき、本番ではfalseにするとよいと思います。
+（詳しくは下記の「仕様」をご覧下さい）
+
+NCMBの管理画面では、「データストア」にLeaderboardという名前のクラスができ、ここにデータが溜まっていきます。
+
+![管理画面「データストア」](Images/Console.png)
 
 ### リーダーボードを表示
 
-コールバックに取得結果が戻ってきますので、ゲームのUI表示スクリプトに渡してあげてください。
+NCMBに保存したスコアの一覧を取得する場合は、LeaderboardManager.GetScoreListByStr()を使います。
+引数に上位いくつまでのスコアを取得したいかと、処理が終わった後のコールバックを渡します。
+複数行のテキストに成形された状態で渡されるので、そのままUI.Text.textに渡せばすぐ表示できます。
 
 ```csharp
 
-StartCoroutine(leaderboardManager.GetScoreList(UnityAction<Scores> callback));
+StartCoroutine(LeaderboardManager.Instance.GetScoreListByStr(10, (scores) =>
+{
+    leaderBoardText.text = scores;
+}));
 
 ```
-
-リーダーボードの形に成形された複数行のstringで結果を取得することもできます。
-デモではこれを使って実装しています。
+ランキングのリストをテキストの塊ではなく、順位ごとにサイズを変えたり、何か効果をつけたい場合は結果をScores()クラスで受け取ることもできます。
+Scoresの中身はScoreクラスのリストで、ScoreクラスはフィールドplayerName, scoreを持っています。
 
 ```csharp
 
-StartCoroutine(leaderboardManager.GetScoreList(UnityAction<string> callback));
-
+        StartCoroutine(LeaderboardManager.Instance.GetScoreList(10, (LeaderboardManager.ScoreDatas scoreDatas) =>
+        {
+            int i = 0;
+            foreach(LeaderboardManager.ScoreData scoreData in scoreDatas.results)
+            {
+                leadarboardPlayerNameText[i].text = scoreData.playerName;
+                leadarboardScoreText[i].text = scoreData.score;
+                i++;
+            }
+        }));
 ```
+
+などのように、任意のUIパーツに情報を流し込むことができます。
+
+
+## 仕様
+このリーダーボードは、1人のプレイヤーは記録を1つしか持てないようになっています。
+99点と98点を出した場合でも、リーダーボード上は99点の方しか表示されません。
+
+内部的には、NCMBへスコアを保存したタイミングで、PCごとにIDが割り振っています。
+これは、NCMB側から振り出されたレコードIDを利用したもので、PlayePrefsを使って、ローカルに「ObjectId」として保存されます。
+つぎにデータを保存しようとした際に、PlayerPrefsにObjectIDが保存されている場合は、新規にレコードを作成せず、同じOjbectIDのレコードを更新します。
+
+ローカルには同時に自己ハイスコアも記録しています。
+スコアを更新しようとした際、この自己スコアと比較して大きかった場合のみ送信処理を行っています。
