@@ -1,12 +1,11 @@
 # Leaderboard For Unity WebGL
 
-## これは何？
-
 Unity WebGLで簡単に使えるランキング（リーダーボード）プラグインです。
 主にUnity WebGLで開発されたゲームの公開サービス、[unityroom](https://unityroom.com/)のために用意しました。
 PC/Mac/iOS/Androidでもそのままご利用いただけます。
-ライセンスはMITです。
+
 スコアを保存するバックエンドにはニフティクラウド mobile backend(NCMB)を使用します。
+NCMBは月間200万APIアクセス(通信回数)まで無料で使うことができます。
 
 http://mb.cloud.nifty.com/
 
@@ -22,13 +21,13 @@ https://github.com/anzfactory/Yoshinani
 
 Unity Editor上で試したり、自分のゲームに導入する場合はNCMBのアカウント取得が必要です。
 
-1. NCMBのアカウントを作り、「アプリ」を作成してAPIキー(Aplication KeyとClient Key)を入手する。
-2. releseのLeaderboardForWebGL.unitypackageをプロジェクトにインポートする
+1. NCMBのアカウントを[作成](https://signup.nifty.com/users/cgi-bin/msignup_cloud.cgi)し、管理画面内でリーダーボード用に「アプリ」を作成してAPIキー(Aplication KeyとClient Key)を入手する。
+2. [releses](https://github.com/NCMBMania/LeaderboardForUnityWebGL/releases)からLeaderboardForWebGL.unitypackageをプロジェクトにインポートする
 3. Demo.sceneを開く
-4. LeaderboardManagerオブジェクトのインスペクタについている「NCMB Rest Controller」にAplication KeyとClient Keyを設定する
-5. 実行、Count Upで数字が増加、Send Scoreでスコアを送信、Show Leaderboardでランキングを取得・表示。
+4. シーン内のLeaderboardManagerオブジェクトにアタッチされている「NCMB Rest Controller」のフィールドにAplication KeyとClient Keyを設定する
+5. エディタで実行。Count Upクリックで数字が増加、Send Scoreでスコアを送信、Show Leaderboardでランキングを取得・表示。
 
-サンプルのランキング表示画面はCanvasを使ったシンプルなものですが、このままゲームへパクっても問題ありません。
+サンプルのランキング表示画面はCanvasを使ったシンプルなものですが、このままゲームへパクってもＯＫです。
 
 ![デモ](Images/Demo.png)
 
@@ -37,10 +36,12 @@ Unity Editor上で試したり、自分のゲームに導入する場合はNCMB�
 
 ### プレハブの配置
 まず、Assets\NCMBLeaderboardWebGL\Prefab\LeaderboardManager をシーン上に配置します。
+配置したら、上記デモ同様にAplication KeyとClient Keyを設定することで使用できるようになります。
+
 LeaderboardManagerはシングルトンクラスですので、他のスクリプトからはLeaderboardManager.Instanceでアクセスできます。
 
-### スコアを送信
 
+### スコアを送信
 LeaderboardManager.csの次の関数をコルーチンとして呼びます。
 
 ```csharp
@@ -50,8 +51,8 @@ StartCoroutine(LeaderboardManager.Instance.SendScore(playerName, score, false));
 ```
 プレイヤーの名前とスコアを与えてコルーチンを実行します。
 
-引数の「isAllowDuplicatedScore」は、プレイヤー1人ごとのスコアの保持を1つにするか、複数にするかのフラグです。
-自分でテストする際はレコードが1個しか登録できないと作りづらいのでtrueにしておき、本番ではfalseにするとよいと思います。
+SendScoreの引数「isAllowDuplicatedScore」は、プレイヤー1人ごとのスコアの保持を1つにするか、複数にするかのフラグです。
+自分でテストする際はレコードが1個しか登録できないと挙動を確認しにくいのでtrueにしておき、本番ではfalseにするとよいと思います。
 （詳しくは下記の「仕様」をご覧下さい）
 
 NCMBの管理画面では、「データストア」にLeaderboardという名前のクラスができ、ここにデータが溜まっていきます。
@@ -59,10 +60,9 @@ NCMBの管理画面では、「データストア」にLeaderboardという名�
 ![管理画面「データストア」](Images/Console.png)
 
 ### リーダーボードを表示
-
 NCMBに保存したスコアの一覧を取得する場合は、LeaderboardManager.GetScoreListByStr()を使います。
-引数に上位いくつまでのスコアを取得したいかと、処理が終わった後のコールバックを渡します。
-複数行のテキストに成形された状態で渡されるので、そのままUI.Text.textに渡せばすぐ表示できます。
+引数には、「上位いくつまでのスコアを取得したいか」と「処理が終わった後のコールバック」を渡します。
+スコアは複数行のテキストに成形された状態で渡されるので、そのままUI.Text.textに渡せばすぐ表示できます。
 
 ```csharp
 
@@ -72,8 +72,34 @@ StartCoroutine(LeaderboardManager.Instance.GetScoreListByStr(10, (scores) =>
 }));
 
 ```
-ランキングのリストをテキストの塊ではなく、順位ごとにサイズを変えたり、何か効果をつけたい場合は結果をScores()クラスで受け取ることもできます。
-Scoresの中身はScoreクラスのリストで、ScoreクラスはフィールドplayerName, scoreを持っています。
+スコアを１つのテキストで表示せずに、順位ごとにUI内でフォントサイズを変えたり、パーツに分けたい場合は結果をScoreDataクラスとして受け取ることもできます。
+ScoreDatasの中身はScoreクラスのリストで、ScoreクラスはフィールドplayerName, scoreを持っています。
+
+
+```csharp
+
+    [Serializable]
+    public class ScoreDatas
+    {
+        public List<ScoreData> results;
+    }
+
+    [Serializable]
+    public class ScoreData
+    {
+        public ScoreData(string playerName, int score)
+        {
+            this.playerName = playerName;
+            this.score = score;
+        }
+
+        public string playerName;
+        public int score;
+    }
+
+```
+
+ScoreDataクラスを使った場合は、コールバックの中で任意のUIパーツに情報を流し込んであげるとよいでしょう。
 
 ```csharp
 
@@ -89,16 +115,18 @@ Scoresの中身はScoreクラスのリストで、Scoreクラスはフィール�
         }));
 ```
 
-などのように、任意のUIパーツに情報を流し込むことができます。
+ScoreDataクラスにプロパティを足して、たとえばプレイヤーがメッセージを残せる機能などを足すと面白いかと思います。
 
-
-## 仕様
+## リーダーボードの仕様
 このリーダーボードは、1人のプレイヤーは記録を1つしか持てないようになっています。
-99点と98点を出した場合でも、リーダーボード上は99点の方しか表示されません。
+たとえば同一プレイヤーが98点の後に99点を出した場合でも、リーダーボード上は99点の方しか表示されません。
 
-内部的には、NCMBへスコアを保存したタイミングで、PCごとにIDが割り振っています。
-これは、NCMB側から振り出されたレコードIDを利用したもので、PlayePrefsを使って、ローカルに「ObjectId」として保存されます。
-つぎにデータを保存しようとした際に、PlayerPrefsにObjectIDが保存されている場合は、新規にレコードを作成せず、同じOjbectIDのレコードを更新します。
+内部的には、NCMBへスコアを保存したタイミングでPCごとにIDを割り振っています。
+これは、NCMB側から振り出されたレコードのIDを利用したもので、IDはPlayePrefsを使ってローカルに「ObjectId」として保存されます。
+つぎにスコアを送信しようとした際、PlayerPrefsにObjectIDが保存されている場合は新規にレコードを作成せず、同じOjbectIDのレコードを更新する処理としています。
 
 ローカルには同時に自己ハイスコアも記録しています。
 スコアを更新しようとした際、この自己スコアと比較して大きかった場合のみ送信処理を行っています。
+
+## ライセンス
+ライセンスはMITです。
