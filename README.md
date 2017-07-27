@@ -25,7 +25,14 @@ Unity Editor上で試したり、自分のゲームに導入する場合はNCMB�
 2. [releses](https://github.com/NCMBMania/LeaderboardForUnityWebGL/releases)からLeaderboardForWebGL.unitypackageをプロジェクトにインポートする
 3. Demo.sceneを開く
 4. シーン内のLeaderboardManagerオブジェクトにアタッチされている「NCMB Rest Controller」のフィールドにAplication KeyとClient Keyを設定する
-5. エディタで実行。Count Upクリックで数字が増加、Send Scoreでスコアを送信、Show Leaderboardでランキングを取得・表示。
+5. エディタで実行。
+
+操作：
+ * Count Up クリックで数字が増加
+ * Send Score スコアを送信
+ * Show Leaderboard ランキングを取得・表示
+ * Hide ランキングを非表示
+ * Delete Local ObjectId and HighScore ローカルに保存されたオブジェクトIDとハイスコアを削除します。新規プレイヤーとしてテストすることができます。
 
 サンプルのランキング表示画面はCanvasを使ったシンプルなものですが、このままゲームへパクってもＯＫです。
 
@@ -127,6 +134,8 @@ ScoreDataクラスにプロパティを足して、たとえばプレイヤー�
 
 ローカルには同時に自己ハイスコアも記録しています。
 スコアを更新しようとした際、この自己スコアと比較して大きかった場合のみ送信処理を行っています。
+
+Demoでは「Delete Local ObjectId and HighScore」ボタンを押すことによって、PlayerPrefsで保存されたObjectId, HighScore, PlayerNameを削除し、「別のＰＣでアクセスしている」のと同じ状態をエミュレートすることができます。
 
 ## ライセンス
 ライセンスはMITです。
