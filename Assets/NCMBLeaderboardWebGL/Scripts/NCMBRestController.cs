@@ -32,8 +32,16 @@ namespace NCMBRest
         public string applicationKey;
         public string clientKey;
 
-        private string baseParamString;
+        //private string baseParamString;
         private string timestamp;
+
+        private void Awake()
+        {
+            if(string.IsNullOrEmpty(applicationKey) || string.IsNullOrEmpty(clientKey))
+            {
+                Debug.LogError("Please Set Application Key and Client Key on Inspector");
+            }
+        }
 
         public enum RequestType
         {
@@ -42,13 +50,13 @@ namespace NCMBRest
             PUT
         }
 
-        public IEnumerator Call(RequestType method, string path, NCMBDataStoreParamSet ncmbObjectRest)
+        public IEnumerator Call(RequestType method, string path, NCMBDataStoreParamSet ncmbObjectRest, Action<long> errorCallback = null)
         {
             string endpoint = this.Endpoint(path);
             string queryString = this.QueryString(ncmbObjectRest);
 
             this.timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            this.baseParamString = this.ParamString();
+            //this.baseParamString = this.ParamString();
 
             UnityWebRequest request;
             switch (method)
@@ -61,6 +69,15 @@ namespace NCMBRest
                     request = UnityWebRequest.Get(endpoint);
                     break;
 
+                    /*
+                case RequestType.POST:
+                    request = UnityWebRequest.Post(endpoint, ncmbObjectRest.FieldsAsJson);
+                    break;
+
+                case RequestType.PUT:
+                    request = UnityWebRequest.Put(endpoint, ncmbObjectRest.FieldsAsJson);
+                    break;
+                    */
                 default:
                     request = new UnityWebRequest(endpoint, method.ToString());
                     request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(ncmbObjectRest.FieldsAsJson));
@@ -77,20 +94,28 @@ namespace NCMBRest
 
             yield return request.Send();
 
+#if UNITY_2017_1_OR_NEWER
+            if (request.isNetworkError)
+#else
             if (request.isError)
+#endif
             {
                 Debug.Log(request.error);
+                yield break;
             }
             else
             {
                 if (request.responseCode == 200 || request.responseCode == 201)
                 {
                     Debug.Log("Request succeed");
-                }
-                else
-                {
+                }else{
                     //登録完了 201
                     Debug.LogWarning("Request Failed" + request.responseCode.ToString());
+
+                    if (errorCallback != null)
+                    {
+                        errorCallback(request.responseCode);
+                    }
                 }
 
                 yield return request.downloadHandler.text;
@@ -111,7 +136,7 @@ namespace NCMBRest
         {
             var pathAndQuery = endpoint.Replace(string.Format("{0}://{1}", API_PROTOCOL, API_DOMAIN), "");
             var parts = pathAndQuery.Split('?');
-            StringBuilder builder = new StringBuilder(this.baseParamString);
+            StringBuilder builder = new StringBuilder(ParamString());
             if (parts.Length == 2)
             {
                 builder.Append(queryString);

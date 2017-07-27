@@ -12,6 +12,8 @@ public class Demo : MonoBehaviour
     public Text leaderBoardText;
     public Button hideButton;
 
+    public bool IsAllowScoreDuplication = true;//本番ではfalse推奨//
+
     private void Awake()
     {
         OnButtonHideLeaderBoard();
@@ -27,8 +29,8 @@ public class Demo : MonoBehaviour
     {
         string playerName = string.IsNullOrEmpty(playerNameInputField.text) ? "No Name" : playerNameInputField.text;
 
-        //一人でテストするとき用に１つのPCからスコアを複数回追加できる重複ＯＫオプションをtrueにしてます。本番用はfalse推奨。//
-        StartCoroutine(LeaderboardManager.Instance.SendScore(playerName, score, true));
+        //一人でテストするとき用に１つのPCからスコアを複数回追加できる重複OKオプションをtrueにしてます。本番用はfalse推奨。//
+        StartCoroutine(LeaderboardManager.Instance.SendScore(playerName, score, IsAllowScoreDuplication));
     }
 
     public void OnButtonShowLeaderBoard()
@@ -47,5 +49,11 @@ public class Demo : MonoBehaviour
     {
         leaderboard.enabled = false;
         leaderBoardText.text = string.Empty;
+    }
+
+    public void OnButtonClearLocalData()
+    {
+        //デバッグ用　ローカルに保存されたハイスコアとObjectIdを消す//
+        LeaderboardManager.Instance.ClearLocalData();
     }
 }
