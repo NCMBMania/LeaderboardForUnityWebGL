@@ -21,7 +21,7 @@ https://github.com/anzfactory/Yoshinani
 
 Unity Editor上で試したり、自分のゲームに導入する場合はNCMBのアカウント取得が必要です。
 
-1. NCMBのアカウントを[作成](http://mb.cloud.nifty.com/signup)し、管理画面内でリーダーボード用に「アプリ」を作成してAPIキー(Aplication KeyとClient Key)を入手する。
+1. NCMBのアカウントを[作成](https://console.mb.cloud.nifty.com/login)し、管理画面内でリーダーボード用に「アプリ」を作成してAPIキー(Aplication KeyとClient Key)を入手する。
 2. [releses](https://github.com/NCMBMania/LeaderboardForUnityWebGL/releases)からLeaderboardForWebGL.unitypackageをプロジェクトにインポートする
 3. Demo.sceneを開く
 4. シーン内のLeaderboardManagerオブジェクトにアタッチされている「NCMB Rest Controller」のフィールドにAplication KeyとClient Keyを設定する
