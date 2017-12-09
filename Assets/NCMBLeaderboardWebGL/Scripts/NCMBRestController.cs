@@ -92,7 +92,11 @@ namespace NCMBRest
 
             request.downloadHandler = new DownloadHandlerBuffer();
 
+#if UNITY_2017_2_OR_NEWER
+            yield return request.SendWebRequest();
+#else
             yield return request.Send();
+#endif
 
 #if UNITY_2017_1_OR_NEWER
             if (request.isNetworkError)
